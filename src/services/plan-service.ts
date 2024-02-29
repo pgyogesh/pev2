@@ -462,6 +462,10 @@ export class PlanService {
       return closingParIndex != -1 && closingParIndex < openingParIndex
     }
 
+    const sameIndent = (line1: string, line2: string) => {
+      return line1.search(/\S/) == line2.search(/\S/)
+    }
+
     _.each(lines, (line: string) => {
       if (countChar(line, /\)/g) > countChar(line, /\(/g)) {
         // if there more closing parenthesis this means that it's the
@@ -483,6 +487,14 @@ export class PlanService {
         } else {
           out.push(line)
         }
+      } else if (
+        0 < out.length &&
+        out[out.length - 1].match(/^\s*Output/i) &&
+        !sameIndent(out[out.length - 1], line)
+      ) {
+        // If previous line was Output and current line is not same indent
+        // (which would mean a new information line)
+        out[out.length - 1] += line
       } else {
         out.push(line)
       }
@@ -822,7 +834,10 @@ export class PlanService {
         //const prefix = extraMatches[1]
 
         // Remove elements from elementsAtDepth for deeper levels
-        _.remove(elementsAtDepth, (e) => e[0] >= depth)
+        // Depth == 1 is a special case here. Global info (for example
+        // execution|planning time) have a depth of 1 but shouldn't be removed
+        // in case first node was at depth 0.
+        _.remove(elementsAtDepth, (e) => e[0] >= depth || depth == 1)
 
         let element
         if (elementsAtDepth.length === 0) {
